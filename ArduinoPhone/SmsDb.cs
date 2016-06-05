@@ -64,7 +64,7 @@ namespace ArduinoPhone
             command.ExecuteNonQuery();
         }
 
-        public void CreateMessagesForNumber(MessageControl m, string number)
+        public Dictionary<string, string> GetMessagesForNumber(MessageControl m, string number)
         {
             SQLiteCommand command = new SQLiteCommand(
                     "select * from messages "
@@ -72,25 +72,17 @@ namespace ArduinoPhone
             command.Parameters.AddWithValue("$num", number);
             command.ExecuteNonQuery();
             SQLiteDataReader read = command.ExecuteReader();
+            Dictionary<string, string> messages = new Dictionary<string, string>();
             if (read.HasRows)
             {
                 while (read.Read())
                 {
                     string sender = read.GetValue(0).ToString();
                     string message = read.GetValue(2).ToString();
-
-                    if (sender == number)
-                    {
-                        m.Add(message, MessageControl.BubblePositionEnum.Left);
-                    }
-                    else
-                    {
-                        m.Add(message, MessageControl.BubblePositionEnum.Right);
-                    }
+                    messages[sender] = message;
                 }
             }
-            else
-                Console.WriteLine("No rows for convo");
+            return messages;
         }
 
         public Dictionary<string, Dictionary<string, string>> GetAllDbMessages()
@@ -131,8 +123,6 @@ namespace ArduinoPhone
             {
                 return true;
             }
-            else
-                Console.WriteLine("No rows");
             return false;
         }
 

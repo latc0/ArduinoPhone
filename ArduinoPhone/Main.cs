@@ -1,34 +1,10 @@
-﻿/*
-MIT License
-
-Copyright (c) 2016 Sam Wilberforce
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.IO.Ports;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -49,28 +25,13 @@ namespace ArduinoPhone
         public Main()
         {
             InitializeComponent();
-
-            // Setup app
-            StartPosition = FormStartPosition.CenterScreen;
             replyBox.GotFocus += ReplyBox_GotFocus;
-            messageViewer.ControlAdded += MessageViewer_ControlAdded;
-            messageViewer.Resize += MessageViewer_Resize;
-            conversationView.ControlAdded += ConversationView_ControlAdded;
             OpenPort();
             GetOwnNumber();
-
-            // Initialise globals
             unreadInConvo = new Dictionary<string, int>();
             smsDb = new SmsDb(myNum);
-
-            // Show all messages in the DB
             ShowAllMessages();
         }
-
-        /* TODO:
-            When deleting convos, message re-appears..      
-            When creating message to new sender, add new entry in convos      
-        */
 
         //Events
         private void NewMessage(object sender, MessageEventArgs e)
@@ -78,24 +39,14 @@ namespace ArduinoPhone
             string num = FormatNumber(e.Number);
             string message = e.Message;
             unreadMessages++;
-            string newTime = "";
-            try
-            {
-                DateTime dt = DateTime.ParseExact(e.Time, "yy/MM/dd,HH:mm:sszz", CultureInfo.InvariantCulture);
-                newTime = dt.ToString("dd/MM/yyyy HH:mm:ss");
-            }
-            catch (FormatException)
-            {
-                newTime = e.Time;
-            }
-            smsDb.StoreIncomingMessage(num, message, newTime);
+            smsDb.StoreIncomingMessage(num, message, e.Time);
 
             if (num == numberToReply)
             {
                 // Incoming text from current sender, add message to conversation
                 Invoke(new Action(() =>
                 {
-                    messageViewer.Add(message, MessageControl.BubblePositionEnum.Left);
+                    messageViewer.Add(message, MessageControl.BubblePositionEnum.Left, copyMessageText);
                 }));
                 unreadMessages--;
             }
@@ -129,7 +80,10 @@ namespace ArduinoPhone
                     ShowMessagesForNumber(formatNum);
                 }
                 else
-                    Console.WriteLine("No previous messages");
+                {
+                    messageViewer.Controls.Clear();
+                }
+                btnCall.Show();
             }
         }
 
@@ -146,12 +100,16 @@ namespace ArduinoPhone
                         string data = line + serial.ReadLine();
                         MessageEventHandler msg = new MessageEventHandler();
                         msg.MessageReceived += NewMessage;
-                        msg.IncomingMessage = data;
+                        msg.IncomingMessage = data; // This triggers the event handler to be called
                     }
                     else if (line.StartsWith("+CLIP: ") && !gotIncomingNum)
                     {
-                        string incomingNum = line.Split('"')[1];
-                        NotifyNewCall(incomingNum);
+                        Invoke(new Action(() =>
+                        {
+                            newCallNumber.Text = "Incoming call: " + line.Split('"')[1];
+                            Util.Animate(callNotification, Util.Effect.Slide, 150, 90);
+                        }));
+                        gotIncomingNum = true;
                     }
                     else if (line.StartsWith("NO CARRIER"))
                     {
@@ -164,24 +122,13 @@ namespace ArduinoPhone
                             answeredCall = false;
                         }
                     }
-                    else if (line.StartsWith("+CUSD: "))
-                    {
-                        /*Regex regex = new Regex(@"\d+\.\d{2}");
-                        Match match = regex.Match(line);
-                        string balance = "ERROR";
-                        if (match.Success)
-                        {
-                            balance = match.Value;
-                        }*/
-                        // Show drop down notification with dismiss button
-                    }
                     else if (line.StartsWith("+CNUM: "))
                     {
                         string[] data = line.Split('"');
                         myNum = FormatNumber(data[3]);
                         Console.WriteLine("Number: " + myNum);
                         gotOwnNumber = true;
-                    }                        
+                    }
                 }
             }
             catch (IOException io)
@@ -316,7 +263,7 @@ namespace ArduinoPhone
         {
             replyBox.Enabled = true;
             btnCall.Show();
-            messageViewer.RemoveAll();
+            messageViewer.Controls.Clear();
             numberToReply = number;
             recipientNumber.Text = number;
             if (unreadInConvo.ContainsKey(number))
@@ -329,7 +276,13 @@ namespace ArduinoPhone
                 string numUnread = (unreadMessages == 0) ? "" : " (" + unreadMessages.ToString() + ")";
                 messageTitle.Text = "Messages" + numUnread;
             }
-            smsDb.CreateMessagesForNumber(messageViewer, number);
+            foreach(KeyValuePair<string, string> msg in smsDb.GetMessagesForNumber(messageViewer, number))
+            {
+                if (msg.Key == myNum)
+                    messageViewer.Add(msg.Value, MessageControl.BubblePositionEnum.Right, copyMessageText);
+                else
+                    messageViewer.Add(msg.Value, MessageControl.BubblePositionEnum.Left, copyMessageText);
+            }
         }
 
         private void ShowAllMessages()
@@ -347,30 +300,6 @@ namespace ArduinoPhone
                 }
                 conversationView.Add(num, lastMessage, lastTimestamp);
             }
-        }
-
-        private void SendSMS(string number, string message)
-        {
-            smsDb.StoreOutgoingMessage(
-                FormatNumber(number), 
-                message, 
-                DateTime.Now.ToString("dd/MM/yyyy HH:mm:sszz")
-                );
-
-            serial.Write("AT+CMGS=\"" + number + "\"\r");
-            Thread.Sleep(500);
-            serial.Write(message + (char)26);
-            Thread.Sleep(500);
-        }
-
-        private void NotifyNewCall(string number)
-        {
-            Invoke(new Action(() =>
-            {
-                newCallNumber.Text = "Incoming call: " + number;
-                Util.Animate(callNotification, Util.Effect.Slide, 150, 90);
-            }));
-            gotIncomingNum = true;
         }
 
         private void updateCharCount(int length)
@@ -435,6 +364,22 @@ namespace ArduinoPhone
             }
         }
 
+        private Control GetSourceControl(object sender)
+        {
+            ToolStripItem menuItem = sender as ToolStripItem;
+            if (menuItem != null)
+            {
+                // Retrieve the ContextMenuStrip that owns this ToolStripItem
+                ContextMenuStrip owner = menuItem.Owner as ContextMenuStrip;
+                if (owner != null)
+                {
+                    // Get the control that is displaying this context menu
+                    return owner.SourceControl;
+                }
+            }
+            return null;
+        }
+
 
         //Buttons
         private void decline_Click(object sender, EventArgs e)
@@ -460,24 +405,18 @@ namespace ArduinoPhone
 
         private void deleteItem_Click(object sender, EventArgs e)
         {
-            // Credit to Cody Gray (http://stackoverflow.com/questions/4886327/determine-what-control-the-contextmenustrip-was-used-on#4886417)
-            ToolStripItem menuItem = sender as ToolStripItem;
-            if (menuItem != null)
+            Control sourceControl = GetSourceControl(sender);
+            Conversation.Entry entry = GetEntryFromConvoClick(sourceControl);
+            if (entry.ConvoNumber == numberToReply)
             {
-                // Retrieve the ContextMenuStrip that owns this ToolStripItem
-                ContextMenuStrip owner = menuItem.Owner as ContextMenuStrip;
-                if (owner != null)
-                {
-                    // Get the control that is displaying this context menu
-                    Control sourceControl = owner.SourceControl;
-                    Conversation.Entry entry = GetEntryFromConvoClick(sourceControl);
-
-                    // TODO: Entry not removed
-                    Console.WriteLine("Deleting " + entry.ConvoNumber);
-                    smsDb.DeleteConversation(entry.ConvoNumber);
-                    conversationView.Remove(entry);
-                }
+                messageViewer.RemoveAll();
+                replyBox.Enabled = false;
+                recipientNumber.Text = "";
+                btnCall.Hide();
             }
+            numberToReply = null;
+            smsDb.DeleteConversation(entry.ConvoNumber);
+            conversationView.Remove(entry);
         }
 
         private void endCall_Click(object sender, EventArgs e)
@@ -490,6 +429,8 @@ namespace ArduinoPhone
         {
             if (newMsg.Text == "New")
             {
+                messageViewer.Controls.Clear();
+                btnCall.Hide();
                 replyBox.Enabled = true;
                 newNumber.Clear();
                 newNumber.Show();
@@ -499,6 +440,8 @@ namespace ArduinoPhone
             else
             {
                 // Cancel
+                if (numberToReply != null)
+                    ShowMessagesForNumber(numberToReply);
                 replyBox.Enabled = false;
                 newNumber.Hide();
                 newMsg.Text = "New";
@@ -507,10 +450,29 @@ namespace ArduinoPhone
 
         private void btnSend_Click(object sender, EventArgs e)
         {
-            SendSMS(numberToReply, replyBox.Text);
-            messageViewer.Add(replyBox.Text, MessageControl.BubblePositionEnum.Right);
+            string message = replyBox.Text;
+            smsDb.StoreOutgoingMessage(
+                FormatNumber(numberToReply),
+                message,
+                DateTime.Now.ToString("dd/MM/yyyy HH:mm:sszz")
+                );
+
+            /*serial.Write("AT+CMGS=\"" + numberToReply + "\"\r");
+            Thread.Sleep(500);
+            serial.Write(message + (char)26);
+            Thread.Sleep(500);*/
+
+            messageViewer.Add(replyBox.Text, MessageControl.BubblePositionEnum.Right, copyMessageText);
             replyBox.Clear();
             btnSend.Enabled = false;
+            ShowAllMessages();
+        }
+
+        private void copyText_Click(object sender, EventArgs e)
+        {
+            Control sourceControl = GetSourceControl(sender);
+            MessageControl.Message msg = sourceControl as MessageControl.Message;
+            Clipboard.SetText(msg.Text);
         }
     }
 }

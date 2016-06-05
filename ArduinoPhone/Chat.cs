@@ -49,7 +49,7 @@ public class MessageControl : ScrollableControl
         Controls.Clear();
     }
 
-    public void Add(string Message, BubblePositionEnum Position)
+    public void Add(string Message, BubblePositionEnum Position, ContextMenuStrip cms)
     {
         Message b = new Message(Position);
 
@@ -85,6 +85,7 @@ public class MessageControl : ScrollableControl
             b.BubbleColor = _LeftBubbleColor;
             b.ForeColor = _LeftBubbleTextColor;
         }
+        b.ContextMenuStrip = cms;
         Messages.Add(b);
         this.Controls.Add(b);
     }

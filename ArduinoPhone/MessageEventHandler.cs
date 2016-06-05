@@ -4,7 +4,6 @@ namespace ArduinoPhone
 {
     class MessageEventHandler
     {
-        private string line;
         public delegate void MessageHandler(object myObject, MessageEventArgs mArgs);
         public event MessageHandler MessageReceived;
 
@@ -12,7 +11,7 @@ namespace ArduinoPhone
         {
             set
             {
-                line = value;
+                string line = value;
                 string[] items = line.Split('"');
                 string num = items[1];
                 string time = items[5];

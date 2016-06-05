@@ -44,10 +44,13 @@
             this.deleteConvo = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.deleteItem = new System.Windows.Forms.ToolStripMenuItem();
             this.newNumber = new System.Windows.Forms.TextBox();
+            this.copyMessageText = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.copyText = new System.Windows.Forms.ToolStripMenuItem();
             this.conversationView = new Conversation();
             this.messageViewer = new MessageControl();
             this.callNotification.SuspendLayout();
             this.deleteConvo.SuspendLayout();
+            this.copyMessageText.SuspendLayout();
             this.SuspendLayout();
             // 
             // replyBox
@@ -76,6 +79,7 @@
             // 
             this.charCount.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.charCount.AutoSize = true;
+            this.charCount.Enabled = false;
             this.charCount.Location = new System.Drawing.Point(332, 579);
             this.charCount.Name = "charCount";
             this.charCount.Size = new System.Drawing.Size(42, 13);
@@ -224,7 +228,7 @@
             // 
             // newNumber
             // 
-            this.newNumber.BackColor = System.Drawing.SystemColors.Highlight;
+            this.newNumber.BackColor = System.Drawing.Color.White;
             this.newNumber.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.newNumber.Location = new System.Drawing.Point(335, 12);
             this.newNumber.Multiline = true;
@@ -232,6 +236,21 @@
             this.newNumber.Size = new System.Drawing.Size(312, 20);
             this.newNumber.TabIndex = 23;
             this.newNumber.Visible = false;
+            // 
+            // copyMessageText
+            // 
+            this.copyMessageText.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.copyText});
+            this.copyMessageText.Name = "copyMessageText";
+            this.copyMessageText.ShowImageMargin = false;
+            this.copyMessageText.Size = new System.Drawing.Size(78, 26);
+            // 
+            // copyText
+            // 
+            this.copyText.Name = "copyText";
+            this.copyText.Size = new System.Drawing.Size(77, 22);
+            this.copyText.Text = "Copy";
+            this.copyText.Click += new System.EventHandler(this.copyText_Click);
             // 
             // conversationView
             // 
@@ -244,6 +263,7 @@
             this.conversationView.Size = new System.Drawing.Size(320, 559);
             this.conversationView.TabIndex = 0;
             this.conversationView.Text = "conversation1";
+            this.conversationView.ControlAdded += new System.Windows.Forms.ControlEventHandler(this.ConversationView_ControlAdded);
             // 
             // messageViewer
             // 
@@ -263,6 +283,8 @@
             this.messageViewer.Size = new System.Drawing.Size(320, 501);
             this.messageViewer.TabIndex = 24;
             this.messageViewer.Text = "messageControl1";
+            this.messageViewer.ControlAdded += new System.Windows.Forms.ControlEventHandler(this.MessageViewer_ControlAdded);
+            this.messageViewer.Resize += new System.EventHandler(this.MessageViewer_Resize);
             // 
             // Main
             // 
@@ -285,11 +307,12 @@
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.Name = "Main";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "ArduinoPhone";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.callNotification.ResumeLayout(false);
             this.deleteConvo.ResumeLayout(false);
+            this.copyMessageText.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -313,6 +336,8 @@
         private System.Windows.Forms.ContextMenuStrip deleteConvo;
         private System.Windows.Forms.ToolStripMenuItem deleteItem;
         private System.Windows.Forms.Label endCall;
+        private System.Windows.Forms.ContextMenuStrip copyMessageText;
+        private System.Windows.Forms.ToolStripMenuItem copyText;
     }
 }
 

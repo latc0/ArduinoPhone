@@ -56,6 +56,7 @@ public class Conversation : ScrollableControl
     public void Remove(Entry entry)
     {
         Conversations.Remove(entry);
+        Controls.Remove(entry);
         RedrawControls();
     }
 

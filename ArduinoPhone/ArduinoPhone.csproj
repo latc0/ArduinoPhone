@@ -92,7 +92,6 @@
     <Compile Include="Conversation.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="CreateMessage.cs" />
     <Compile Include="Main.cs">
       <SubType>Form</SubType>
     </Compile>
