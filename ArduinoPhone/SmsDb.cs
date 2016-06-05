@@ -64,7 +64,7 @@ namespace ArduinoPhone
             command.ExecuteNonQuery();
         }
 
-        public Dictionary<string, string> GetMessagesForNumber(MessageControl m, string number)
+        public Dictionary<string, List<string>> GetMessagesForNumber(MessageControl m, string number)
         {
             SQLiteCommand command = new SQLiteCommand(
                     "select * from messages "
@@ -72,14 +72,16 @@ namespace ArduinoPhone
             command.Parameters.AddWithValue("$num", number);
             command.ExecuteNonQuery();
             SQLiteDataReader read = command.ExecuteReader();
-            Dictionary<string, string> messages = new Dictionary<string, string>();
+            Dictionary<string, List<string>> messages = new Dictionary<string, List<string>>();
             if (read.HasRows)
             {
+                List<string> msgs = new List<string>();
                 while (read.Read())
                 {
                     string sender = read.GetValue(0).ToString();
                     string message = read.GetValue(2).ToString();
-                    messages[sender] = message;
+                    msgs.Add(message);
+                    messages[sender] = msgs;
                 }
             }
             return messages;

@@ -263,7 +263,7 @@ namespace ArduinoPhone
         {
             replyBox.Enabled = true;
             btnCall.Show();
-            messageViewer.Controls.Clear();
+            messageViewer.RemoveAll();
             numberToReply = number;
             recipientNumber.Text = number;
             if (unreadInConvo.ContainsKey(number))
@@ -276,12 +276,17 @@ namespace ArduinoPhone
                 string numUnread = (unreadMessages == 0) ? "" : " (" + unreadMessages.ToString() + ")";
                 messageTitle.Text = "Messages" + numUnread;
             }
-            foreach(KeyValuePair<string, string> msg in smsDb.GetMessagesForNumber(messageViewer, number))
+            foreach(KeyValuePair<string, List<string>> msg in smsDb.GetMessagesForNumber(messageViewer, number))
             {
-                if (msg.Key == myNum)
-                    messageViewer.Add(msg.Value, MessageControl.BubblePositionEnum.Right, copyMessageText);
-                else
-                    messageViewer.Add(msg.Value, MessageControl.BubblePositionEnum.Left, copyMessageText);
+                string sender = msg.Key;
+                List<string> messages = msg.Value;
+                foreach(string m in messages)
+                {
+                    if (sender == myNum)
+                        messageViewer.Add(m, MessageControl.BubblePositionEnum.Right, copyMessageText);
+                    else
+                        messageViewer.Add(m, MessageControl.BubblePositionEnum.Left, copyMessageText);
+                }                
             }
         }
 

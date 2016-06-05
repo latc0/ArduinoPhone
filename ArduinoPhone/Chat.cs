@@ -87,7 +87,7 @@ public class MessageControl : ScrollableControl
         }
         b.ContextMenuStrip = cms;
         Messages.Add(b);
-        this.Controls.Add(b);
+        Controls.Add(b);
     }
 
     private void RedrawControls()
@@ -96,7 +96,7 @@ public class MessageControl : ScrollableControl
         Message last = null;
         int new_width = Width;
         SuspendLayout();
-        foreach (Message m in this.Controls)
+        foreach (Message m in Controls)
         {
             if (count > 0)
             {
@@ -125,9 +125,9 @@ public class MessageControl : ScrollableControl
         private bool _DrawBubbleArrow = true;
         private BubblePositionEnum _BubblePosition = BubblePositionEnum.Left;
 
-        public override Color ForeColor { get { return this._TextColor; } set { this._TextColor = value; this.Invalidate(); } }
-        public BubblePositionEnum BubblePosition { get { return this._BubblePosition; } set { this._BubblePosition = value; this.Invalidate(); } }
-        public Color BubbleColor { get { return this._BubbleColor; } set { this._BubbleColor = value; this.Invalidate(); } }
+        public override Color ForeColor { get { return _TextColor; } set { _TextColor = value; Invalidate(); } }
+        public BubblePositionEnum BubblePosition { get { return _BubblePosition; } set { _BubblePosition = value; Invalidate(); } }
+        public Color BubbleColor { get { return _BubbleColor; } set { _BubbleColor = value; Invalidate(); } }
         public bool DrawBubbleArrow { get { return _DrawBubbleArrow; } set { _DrawBubbleArrow = value; Invalidate(); } }
         public Message(BubblePositionEnum Position)
         {
@@ -143,11 +143,11 @@ public class MessageControl : ScrollableControl
 
         protected override void OnResize(EventArgs e)
         {
-            Bitmap B = new Bitmap(this.Width, this.Height);
+            Bitmap B = new Bitmap(Width, Height);
             Graphics G = Graphics.FromImage(B);
 
             SizeF s = G.MeasureString(Text, Font, Width - 25);
-            this.Height = (int)(Math.Floor(s.Height) + 10);
+            Height = (int)(Math.Floor(s.Height) + 10);
             Shape = new GraphicsPath();
 
             var _Shape = Shape;
@@ -176,7 +176,7 @@ public class MessageControl : ScrollableControl
         {
             base.OnPaint(e);
            
-            Bitmap B = new Bitmap(this.Width, this.Height);
+            Bitmap B = new Bitmap(Width, Height);
             Graphics G = Graphics.FromImage(B);
             var _G = G;
 
