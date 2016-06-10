@@ -43,16 +43,6 @@ namespace ArduinoPhone
 
         public void StoreIncomingMessage(string src, string message, string time)
         {
-            string newTime = "";
-            try
-            {
-                DateTime dt = DateTime.ParseExact(time, "yy/MM/dd,HH:mm:sszz", CultureInfo.InvariantCulture);
-                newTime = dt.ToString("dd/MM/yyyy HH:mm:ss");
-            }
-            catch (FormatException)
-            {
-                newTime = time;
-            }
             SQLiteCommand command = new SQLiteCommand(
                     "insert into messages "
                    + "(sender,receiver,message,timestamp) "
@@ -60,11 +50,11 @@ namespace ArduinoPhone
             command.Parameters.AddWithValue("$srcNum", src);
             command.Parameters.AddWithValue("$myNum", myNum);
             command.Parameters.AddWithValue("$message", message);
-            command.Parameters.AddWithValue("$time", newTime);
+            command.Parameters.AddWithValue("$time", time);
             command.ExecuteNonQuery();
         }
 
-        public Dictionary<string, List<string>> GetMessagesForNumber(MessageControl m, string number)
+        public void ShowMessagesForNumber(MessageControl m, string number)
         {
             SQLiteCommand command = new SQLiteCommand(
                     "select * from messages "
@@ -72,45 +62,39 @@ namespace ArduinoPhone
             command.Parameters.AddWithValue("$num", number);
             command.ExecuteNonQuery();
             SQLiteDataReader read = command.ExecuteReader();
-            Dictionary<string, List<string>> messages = new Dictionary<string, List<string>>();
             if (read.HasRows)
             {
-                List<string> msgs = new List<string>();
                 while (read.Read())
                 {
                     string sender = read.GetValue(0).ToString();
                     string message = read.GetValue(2).ToString();
-                    msgs.Add(message);
-                    messages[sender] = msgs;
+                    if (sender == myNum)
+                        m.Add(message, MessageControl.BubblePositionEnum.Right);
+                    else
+                        m.Add(message, MessageControl.BubblePositionEnum.Left);
                 }
             }
-            return messages;
         }
 
-        public Dictionary<string, Dictionary<string, string>> GetAllDbMessages()
+        public void GetAllDbMessages(Conversation c)
         {
-            Dictionary<string, Dictionary<string, string>> all = new Dictionary<string, Dictionary<string, string>>();
             SQLiteCommand command = new SQLiteCommand(
                 "select * from messages", dbConn);
             command.ExecuteNonQuery();
             SQLiteDataReader read = command.ExecuteReader();
             if (read.HasRows)
             {
+                string num = "", message = "", timestamp = "";
                 while (read.Read())
                 {
                     string sender = read.GetString(0);
                     string receiver = read.GetString(1);
-                    string message = read.GetString(2);
-                    string timestamp = read.GetString(3);
-                    Dictionary<string, string> keyDict = new Dictionary<string, string>();
-                    keyDict[message] = timestamp;
-                    if (sender == myNum)
-                        all[receiver] = keyDict;
-                    else
-                        all[sender] = keyDict;
+                    message = read.GetString(2);
+                    timestamp = read.GetString(3);
+                    num = (sender == myNum) ? receiver : sender;
                 }
+                c.Add(num, message, timestamp);
             }
-            return all;
         }
 
         public bool NumberInPreviousRecipients(string number)

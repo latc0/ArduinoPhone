@@ -9,6 +9,8 @@ public class MessageControl : ScrollableControl
 
     public List<Message> Messages { get; private set; }
 
+    public ContextMenuStrip cms;
+
     private Color _LeftBubbleColor = Color.LightGray;
     private Color _RightBubbleColor = Color.LimeGreen;
     private Color _LeftBubbleTextColor = Color.Black;
@@ -49,7 +51,7 @@ public class MessageControl : ScrollableControl
         Controls.Clear();
     }
 
-    public void Add(string Message, BubblePositionEnum Position, ContextMenuStrip cms)
+    public void Add(string Message, BubblePositionEnum Position)
     {
         Message b = new Message(Position);
 

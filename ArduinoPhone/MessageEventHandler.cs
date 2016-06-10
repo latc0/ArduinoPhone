@@ -12,10 +12,10 @@ namespace ArduinoPhone
             set
             {
                 string line = value;
-                string[] items = line.Split('"');
-                string num = items[1];
-                string time = items[5];
-                string message = items[6];
+                string[] items = line.Remove(0, 6).Replace("\"", "").Split(',');
+                string num = items[0];
+                string time = items[2] + "," + items[3];
+                string message = items[4];
                 MessageEventArgs mArgs = new MessageEventArgs(num, message, time);
                 MessageReceived(this, mArgs);
             }

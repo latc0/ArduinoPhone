@@ -21,15 +21,19 @@ namespace ArduinoPhone
         SmsDb smsDb;
         string myNum;
         Dictionary<string, int> unreadInConvo;
+        MessageEventHandler msg;
 
         public Main()
         {
             InitializeComponent();
             replyBox.GotFocus += ReplyBox_GotFocus;
+            messageViewer.cms = copyMessageText;
             OpenPort();
             GetOwnNumber();
             unreadInConvo = new Dictionary<string, int>();
             smsDb = new SmsDb(myNum);
+            msg = new MessageEventHandler();
+            msg.MessageReceived += NewMessage;
             ShowAllMessages();
         }
 
@@ -39,6 +43,7 @@ namespace ArduinoPhone
             string num = FormatNumber(e.Number);
             string message = e.Message;
             unreadMessages++;
+            Console.WriteLine("Incoming message time: " + e.Time);
             smsDb.StoreIncomingMessage(num, message, e.Time);
 
             if (num == numberToReply)
@@ -46,7 +51,7 @@ namespace ArduinoPhone
                 // Incoming text from current sender, add message to conversation
                 Invoke(new Action(() =>
                 {
-                    messageViewer.Add(message, MessageControl.BubblePositionEnum.Left, copyMessageText);
+                    messageViewer.Add(message, MessageControl.BubblePositionEnum.Left);
                 }));
                 unreadMessages--;
             }
@@ -92,15 +97,12 @@ namespace ArduinoPhone
             try
             {
                 string line = "";
-                while ((line = serial.ReadLine()) != null)
-                {
+                while ((line = serial.ReadLine()) != null){
                     Console.WriteLine(line);
-                    if (line.StartsWith("+CMT: ") && !line.Contains("??"))
+                    if (line.StartsWith("+CMT: "))
                     {
-                        string data = line + serial.ReadLine();
-                        MessageEventHandler msg = new MessageEventHandler();
-                        msg.MessageReceived += NewMessage;
-                        msg.IncomingMessage = data; // This triggers the event handler to be called
+                        string data = line + "," + serial.ReadLine();
+                        msg.IncomingMessage = data;
                     }
                     else if (line.StartsWith("+CLIP: ") && !gotIncomingNum)
                     {
@@ -110,6 +112,13 @@ namespace ArduinoPhone
                             Util.Animate(callNotification, Util.Effect.Slide, 150, 90);
                         }));
                         gotIncomingNum = true;
+                    }
+                    else if (line.StartsWith("+COLP: "))
+                    {
+                        Invoke(new Action(() =>
+                        {
+                            newCallNumber.Text = numberToReply;
+                        }));
                     }
                     else if (line.StartsWith("NO CARRIER"))
                     {
@@ -276,35 +285,14 @@ namespace ArduinoPhone
                 string numUnread = (unreadMessages == 0) ? "" : " (" + unreadMessages.ToString() + ")";
                 messageTitle.Text = "Messages" + numUnread;
             }
-            foreach(KeyValuePair<string, List<string>> msg in smsDb.GetMessagesForNumber(messageViewer, number))
-            {
-                string sender = msg.Key;
-                List<string> messages = msg.Value;
-                foreach(string m in messages)
-                {
-                    if (sender == myNum)
-                        messageViewer.Add(m, MessageControl.BubblePositionEnum.Right, copyMessageText);
-                    else
-                        messageViewer.Add(m, MessageControl.BubblePositionEnum.Left, copyMessageText);
-                }                
-            }
+            smsDb.ShowMessagesForNumber(messageViewer, number);
+            replyBox.Focus();
         }
 
         private void ShowAllMessages()
         {
             conversationView.RemoveAll();
-            foreach (KeyValuePair<string, Dictionary<string, string>> kv in smsDb.GetAllDbMessages())
-            {
-                string num = kv.Key;
-                string lastMessage = "";
-                string lastTimestamp = "";
-                foreach (KeyValuePair<string, string> details in kv.Value)
-                {
-                    lastMessage = details.Key;
-                    lastTimestamp = details.Value;
-                }
-                conversationView.Add(num, lastMessage, lastTimestamp);
-            }
+            smsDb.GetAllDbMessages(conversationView);
         }
 
         private void updateCharCount(int length)
@@ -342,16 +330,27 @@ namespace ArduinoPhone
             serial.WriteLine("AT+CLIP=1,1");
             Thread.Sleep(500);
 
+            // Enable connected line notification
+            serial.WriteLine("AT+COLP=1,0");
+            Thread.Sleep(500);
+
+            // Use verbose values for errors
+            serial.WriteLine("AT+CMEE=2");
+            Thread.Sleep(500);
+
+            // Use long format for informational messages
+            serial.WriteLine("ATV1");
+            Thread.Sleep(500);
+
+            // Enable USSD result codes
+            serial.WriteLine("AT+CUSD=1");
+            Thread.Sleep(500);
+
             // Set clock yy/MM/dd,HH:mm:ss+-zz
             DateTime dt = DateTime.Now;
             string formatted = dt.ToString("yy/MM/dd,HH:mm:sszz");
             serial.WriteLine("AT+CCLK=" + formatted);
             Thread.Sleep(500);
-        }
-
-        private void CallNumber(string num)
-        {
-            serial.WriteLine("ATD" + num + ";");
         }
 
         private Conversation.Entry GetEntryFromConvoClick(object sender)
@@ -405,7 +404,12 @@ namespace ArduinoPhone
 
         private void btnCall_Click(object sender, EventArgs e)
         {
-            CallNumber(numberToReply);
+            newCallNumber.Text = "Dialing " + numberToReply;
+            Util.Animate(callNotification, Util.Effect.Slide, 150, 90);
+            answer.Hide();
+            decline.Hide();
+            endCall.Show();
+            serial.WriteLine("ATD" + numberToReply + ";");
         }
 
         private void deleteItem_Click(object sender, EventArgs e)
@@ -434,7 +438,7 @@ namespace ArduinoPhone
         {
             if (newMsg.Text == "New")
             {
-                messageViewer.Controls.Clear();
+                messageViewer.RemoveAll();
                 btnCall.Hide();
                 replyBox.Enabled = true;
                 newNumber.Clear();
@@ -456,21 +460,20 @@ namespace ArduinoPhone
         private void btnSend_Click(object sender, EventArgs e)
         {
             string message = replyBox.Text;
-            smsDb.StoreOutgoingMessage(
-                FormatNumber(numberToReply),
-                message,
-                DateTime.Now.ToString("dd/MM/yyyy HH:mm:sszz")
-                );
+            string fNum = FormatNumber(numberToReply);
+            string fTime = DateTime.Now.ToString("dd/MM/yyyy,HH:mm:sszz");
+            smsDb.StoreOutgoingMessage(fNum, message, fTime);
 
-            /*serial.Write("AT+CMGS=\"" + numberToReply + "\"\r");
-            Thread.Sleep(500);
+            serial.Write("AT+CMGS=\"" + numberToReply + "\"\r");
+            Thread.Sleep(100);
             serial.Write(message + (char)26);
-            Thread.Sleep(500);*/
+            Thread.Sleep(100);
 
-            messageViewer.Add(replyBox.Text, MessageControl.BubblePositionEnum.Right, copyMessageText);
+            messageViewer.Add(message, MessageControl.BubblePositionEnum.Right);
             replyBox.Clear();
             btnSend.Enabled = false;
-            ShowAllMessages();
+            conversationView.Add(fNum, message, fTime);
+            serial.WriteLine("AT+CEER");
         }
 
         private void copyText_Click(object sender, EventArgs e)
