@@ -4,228 +4,201 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
-public class MessageControl : ScrollableControl
+namespace ArduinoPhone
 {
-
-    public List<Message> Messages { get; private set; }
-
-    public ContextMenuStrip cms;
-
-    private Color _LeftBubbleColor = Color.LightGray;
-    private Color _RightBubbleColor = Color.LimeGreen;
-    private Color _LeftBubbleTextColor = Color.Black;
-    private Color _RightBubbleTextColor = Color.White;
-    private bool _DrawArrow = true;
-    private int _BubbleIndent = 40;
-    private int _BubbleSpacing = 10;
-    public enum BubblePositionEnum { Left, Right }
-
-    public Color LeftBubbleColor { get { return _LeftBubbleColor; } set { _LeftBubbleColor = value; } }
-    public Color RightBubbleColor { get { return _RightBubbleColor; } set { _RightBubbleColor = value; } }
-    public Color LeftBubbleTextColor { get { return _LeftBubbleTextColor; } set { _LeftBubbleTextColor = value; } }
-    public Color RightBubbleTextColor { get { return _RightBubbleTextColor; } set { _RightBubbleTextColor = value; } }
-    public int BubbleIndent { get { return _BubbleIndent; } set { _BubbleIndent = value; } }
-    public int BubbleSpacing { get { return _BubbleSpacing; } set { _BubbleSpacing = value; } }
-    public bool DrawArrow { get { return _DrawArrow; } set { _DrawArrow = value; } }
-
-    public MessageControl()
+    public class MessageControl : ScrollableControl
     {
-        Messages = new List<Message>();
-        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor | ControlStyles.UserPaint, true);
-        DoubleBuffered = true;
-        BackColor = Color.Orange;
-        Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
-        AutoScroll = true;
-    }
+        public List<Message> Messages { get; private set; }
 
-    public void Remove(Message message)
-    {
-        Invalidate();
-        Messages.Remove(message);
-        RedrawControls();
-    }
+        private Color _LeftBubbleColor = Color.LightGray;
+        private Color _RightBubbleColor = Color.LimeGreen;
+        private Color _LeftBubbleTextColor = Color.Black;
+        private Color _RightBubbleTextColor = Color.White;
+        private int _BubbleIndent = 40;
+        private int _BubbleSpacing = 10;
+        public enum BubblePositionEnum { Left, Right }
 
-    public void RemoveAll()
-    {
-        Messages.Clear();
-        Controls.Clear();
-    }
-
-    public void Add(string Message, BubblePositionEnum Position)
-    {
-        Message b = new Message(Position);
-
-        if (Messages.Count > 0)
+        public MessageControl()
         {
-            b.Top = Messages[Messages.Count - 1].Top + Messages[Messages.Count - 1].Height + _BubbleSpacing;
-        }
-        else
-        {
-            b.Top = _BubbleSpacing + AutoScrollPosition.Y;
+            Messages = new List<Message>();
+            SetStyle(ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.SupportsTransparentBackColor |
+                ControlStyles.UserPaint, true);
+            DoubleBuffered = true;
+            BackColor = Color.White;
+            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+            AutoScroll = true;
         }
 
-        b.Text = Message;
-        b.DrawBubbleArrow = _DrawArrow;
+        public void RemoveAll()
+        {
+            Messages.Clear();
+            Controls.Clear();
+        }
 
-        if (VerticalScroll.Visible)
+        public void AddSent(string message)
         {
-            b.Width = Width - (_BubbleIndent + _BubbleSpacing + SystemInformation.VerticalScrollBarWidth);
-        }
-        else
-        {
-            b.Width = Width - (_BubbleIndent + _BubbleSpacing);
-        }
-        if (Position == BubblePositionEnum.Right)
-        {
-            b.Left = _BubbleIndent;
+            Message b = new Message(BubblePositionEnum.Right);
+            if (Messages.Count > 0)
+            {
+                b.Top = Messages[Messages.Count - 1].Top + Messages[Messages.Count - 1].Height + _BubbleSpacing;
+            }
+            else
+            {
+                b.Top = _BubbleSpacing + AutoScrollPosition.Y;
+            }
+
+            b.Text = message;
+            using (Graphics G = Graphics.FromHwnd(IntPtr.Zero))
+            {
+                SizeF s = G.MeasureString(b.Text, Font, Width - 25);
+                b.Width = (int)s.Width * 2;
+                b.Height = (int)(Math.Floor(s.Height) + 10);
+            }
+            b.Left = Width - b.Width;
+            if (VerticalScroll.Visible)
+                b.Left -= SystemInformation.VerticalScrollBarWidth;
             b.BubbleColor = _RightBubbleColor;
             b.ForeColor = _RightBubbleTextColor;
+            b.Anchor |= AnchorStyles.Right;
+
+            Messages.Add(b);
+            Controls.Add(b);
         }
-        else
+
+        public void AddReceived(string message)
         {
-            b.Left = _BubbleSpacing;
+            Message b = new Message(BubblePositionEnum.Left);
+            if (Messages.Count > 0)
+            {
+                b.Top = Messages[Messages.Count - 1].Top + Messages[Messages.Count - 1].Height + _BubbleSpacing + AutoScrollPosition.Y;
+            }
+            else
+            {
+                b.Top = _BubbleSpacing + AutoScrollPosition.Y;
+            }
+            b.Text = message;
+            using (Graphics G = Graphics.FromHwnd(IntPtr.Zero))
+            {
+                SizeF s = G.MeasureString(b.Text, Font, Width - 25);
+                b.Width = (int)s.Width;
+                b.Height = (int)(Math.Floor(s.Height) + 10);
+            }
+
+            b.Left = 10;
             b.BubbleColor = _LeftBubbleColor;
             b.ForeColor = _LeftBubbleTextColor;
-        }
-        b.ContextMenuStrip = cms;
-        Messages.Add(b);
-        Controls.Add(b);
-    }
+            b.Anchor |= AnchorStyles.Left;
 
-    private void RedrawControls()
-    {
-        int count = 0;
-        Message last = null;
-        int new_width = Width;
-        SuspendLayout();
-        foreach (Message m in Controls)
+            Messages.Add(b);
+            Controls.Add(b);
+        }
+
+        private void RedrawControls()
         {
-            if (count > 0)
+            int count = 0;
+            Message last = null;
+            int new_width = Width;
+            SuspendLayout();
+            foreach (Message m in Controls)
             {
-                m.Top = last.Top + last.Height + _BubbleSpacing + AutoScrollPosition.Y;
-                if (VerticalScroll.Visible)
+                if (count > 0)
                 {
-                    m.Width = new_width - (_BubbleIndent + _BubbleSpacing + SystemInformation.VerticalScrollBarWidth);
+                    m.Top = last.Top + last.Height + _BubbleSpacing + AutoScrollPosition.Y;
+                    if (VerticalScroll.Visible)
+                    {
+                        m.Width = new_width - (_BubbleIndent + _BubbleSpacing + SystemInformation.VerticalScrollBarWidth);
+                    }
+                    else
+                    {
+                        m.Width = new_width - (_BubbleIndent + _BubbleSpacing);
+                    }
                 }
-                else
-                {
-                    m.Width = new_width - (_BubbleIndent + _BubbleSpacing);
-                }
+                last = m;
+                count++;
             }
-            last = m;
-            count++;
-        }
-        ResumeLayout();
-        Invalidate();
-    }
-
-    public class Message : Control
-    {
-        private GraphicsPath Shape;
-        private Color _TextColor = Color.FromArgb(52, 52, 52);
-        private Color _BubbleColor = Color.FromArgb(217, 217, 217);
-        private bool _DrawBubbleArrow = true;
-        private BubblePositionEnum _BubblePosition = BubblePositionEnum.Left;
-
-        public override Color ForeColor { get { return _TextColor; } set { _TextColor = value; Invalidate(); } }
-        public BubblePositionEnum BubblePosition { get { return _BubblePosition; } set { _BubblePosition = value; Invalidate(); } }
-        public Color BubbleColor { get { return _BubbleColor; } set { _BubbleColor = value; Invalidate(); } }
-        public bool DrawBubbleArrow { get { return _DrawBubbleArrow; } set { _DrawBubbleArrow = value; Invalidate(); } }
-        public Message(BubblePositionEnum Position)
-        {
-            _BubblePosition = Position;
-            SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.SupportsTransparentBackColor | ControlStyles.UserPaint, true);
-            DoubleBuffered = true;
-            Size = new Size(152, 38);
-            BackColor = Color.Transparent;
-            ForeColor = Color.FromArgb(52, 52, 52);
-            Font = new Font("Segoe UI", 10);
-            Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-        }
-
-        protected override void OnResize(EventArgs e)
-        {
-            Bitmap B = new Bitmap(Width, Height);
-            Graphics G = Graphics.FromImage(B);
-
-            SizeF s = G.MeasureString(Text, Font, Width - 25);
-            Height = (int)(Math.Floor(s.Height) + 10);
-            Shape = new GraphicsPath();
-
-            var _Shape = Shape;
-            if (BubblePosition == BubblePositionEnum.Left)
-            {
-                _Shape.AddArc(9, 0, 10, 10, 180, 90);
-                _Shape.AddArc(Width - 11, 0, 10, 10, -90, 90);
-                _Shape.AddArc(Width - 11, Height - 11, 10, 10, 0, 90);
-                _Shape.AddArc(9, Height - 11, 10, 10, 90, 90);
-            }
-            else
-            {
-                _Shape.AddArc(0, 0, 10, 10, 180, 90);
-                _Shape.AddArc(Width - 18, 0, 10, 10, -90, 90);
-                _Shape.AddArc(Width - 18, Height - 11, 10, 10, 0, 90);
-                _Shape.AddArc(0, Height - 11, 10, 10, 90, 90);
-            }
-            _Shape.CloseAllFigures();
-            
-
+            ResumeLayout();
             Invalidate();
-            base.OnResize(e);
         }
 
-        protected override void OnPaint(PaintEventArgs e)
+        public class Message : Control
         {
-            base.OnPaint(e);
-           
-            Bitmap B = new Bitmap(Width, Height);
-            Graphics G = Graphics.FromImage(B);
-            var _G = G;
+            private Color _TextColor = Color.FromArgb(52, 52, 52);
+            private Color _BubbleColor = Color.FromArgb(217, 217, 217);
+            private BubblePositionEnum _BubblePosition = BubblePositionEnum.Left;
 
-            _G.SmoothingMode = SmoothingMode.HighQuality;
-            _G.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            _G.Clear(BackColor);
-
-            // Fill the body of the bubble with the specified color
-            _G.FillPath(new SolidBrush(_BubbleColor), Shape);
-            // Draw the string specified in 'Text' property
-            if (_BubblePosition == BubblePositionEnum.Left)
+            public override Color ForeColor { get { return _TextColor; } set { _TextColor = value; Invalidate(); } }
+            public BubblePositionEnum BubblePosition
             {
-                _G.DrawString(Text, Font, new SolidBrush(ForeColor), new Rectangle(13, 4, Width - 25, Height - 5));
+                get { return _BubblePosition; }
+                set { _BubblePosition = value; Invalidate(); }
             }
-            else
+            public Color BubbleColor { get { return _BubbleColor; } set { _BubbleColor = value; Invalidate(); } }
+
+            public Message(BubblePositionEnum Position)
             {
-                _G.DrawString(Text, Font, new SolidBrush(ForeColor), new Rectangle(5, 4, Width - 25, Height - 5));
+                _BubblePosition = Position;
+                SetStyle(ControlStyles.AllPaintingInWmPaint |
+                    ControlStyles.OptimizedDoubleBuffer |
+                    ControlStyles.ResizeRedraw |
+                    ControlStyles.SupportsTransparentBackColor |
+                    ControlStyles.UserPaint, true);
+                DoubleBuffered = true;
+                Size = new Size(152, 38);
+                BackColor = Color.Transparent;
+                ForeColor = Color.FromArgb(52, 52, 52);
+                Font = new Font("Segoe UI", 10);
+                Anchor = AnchorStyles.Top;
             }
 
-            // Draw a polygon on the right side of the bubble
-            if (_DrawBubbleArrow == true)
+            protected override void OnPaint(PaintEventArgs e)
             {
+                base.OnPaint(e);
+
+                Bitmap B = new Bitmap(Width, Height);
+                Graphics G = Graphics.FromImage(B);
+                var _G = G;
+
+                _G.SmoothingMode = SmoothingMode.HighQuality;
+                _G.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                _G.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                _G.Clear(BackColor);
+
+                // Fill the body of the bubble with the specified color
+                GraphicsPath Shape = new GraphicsPath();
+                int x = 0;
+                int textX = 3;
+                int p1 = Width - 10;
+                int p2 = Width;
+                int p3 = Width - 10;
                 if (_BubblePosition == BubblePositionEnum.Left)
                 {
-                    Point[] p = {
-                        new Point(9, 9),
-                        new Point(0, 15),
-                        new Point(9, 20)
-                   };
-                    _G.FillPolygon(new SolidBrush(_BubbleColor), p);
-                    _G.DrawPolygon(new Pen(new SolidBrush(_BubbleColor)), p);
+                    x = 10;
+                    textX = 13;
+                    p1 = 10;
+                    p2 = 0;
+                    p3 = 10;
                 }
-                else
-                {
-                    Point[] p = {
-                        new Point(Width - 8, 9),
-                        new Point(Width, 15),
-                        new Point(Width - 8, 20)
-                    };
-                    _G.FillPolygon(new SolidBrush(_BubbleColor), p);
-                    _G.DrawPolygon(new Pen(new SolidBrush(_BubbleColor)), p);
-                }
+                Shape.AddRectangle(new Rectangle(x, 0, Width - 10, Height));  // Area to be filled by bubble colour
+                Shape.CloseAllFigures();
+                _G.FillPath(new SolidBrush(_BubbleColor), Shape);
+
+                _G.DrawString(Text, Font, new SolidBrush(ForeColor), new Rectangle(textX, 4, Width - 10, Height - 5));
+                Point[] p = {
+                             new Point(p1, Height),
+                             new Point(p2, Height),
+                             new Point(p3, Height - 15)
+                        };
+                _G.FillPolygon(new SolidBrush(_BubbleColor), p);
+                _G.DrawPolygon(new Pen(new SolidBrush(_BubbleColor)), p);
+
+                _G.Dispose();
+                e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                e.Graphics.DrawImageUnscaled(B, 0, 0);
+                B.Dispose();
             }
-            G.Dispose();
-            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            e.Graphics.DrawImageUnscaled(B, 0, 0);
-            B.Dispose();
         }
     }
 }

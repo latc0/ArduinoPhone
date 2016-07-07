@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
-using System.IO;
 using System.IO.Ports;
 using System.Threading;
 using System.Windows.Forms;
@@ -12,7 +11,6 @@ namespace ArduinoPhone
 {
     public partial class Main : Form
     {
-        SerialPort serial;
         bool gotIncomingNum = false;
         bool answeredCall = false;
         bool gotOwnNumber = false;
@@ -21,51 +19,77 @@ namespace ArduinoPhone
         SmsDb smsDb;
         string myNum;
         Dictionary<string, int> unreadInConvo;
-        MessageEventHandler msg;
+        const string mainTitle = "ArduinoPhone";
+        Conversation.Entry prevEntry;
 
         public Main()
         {
             InitializeComponent();
             replyBox.GotFocus += ReplyBox_GotFocus;
-            messageViewer.cms = copyMessageText;
             OpenPort();
+            // SetupModem();
             GetOwnNumber();
             unreadInConvo = new Dictionary<string, int>();
             smsDb = new SmsDb(myNum);
-            msg = new MessageEventHandler();
-            msg.MessageReceived += NewMessage;
             ShowAllMessages();
         }
 
-        //Events
-        private void NewMessage(object sender, MessageEventArgs e)
+        private enum ATCommandType
         {
-            string num = FormatNumber(e.Number);
-            string message = e.Message;
-            unreadMessages++;
-            Console.WriteLine("Incoming message time: " + e.Time);
-            smsDb.StoreIncomingMessage(num, message, e.Time);
+            ReceivedMessage,
+            CallingLineIdentification,
+            ConnectedLineIdentification,
+            CallEnd,
+            OK,
+            SubscriberNumber,
+            Unknown,
+        }
 
-            if (num == numberToReply)
+        //Events
+        private void NotifyNewMessage(string number, string message, string time)
+        {
+            string[] tz = time.Split('+');
+            int tzi = Convert.ToInt32(tz[1]) / 4;
+            time = tz[0] + "+0" + tzi;
+            time = DateTime.ParseExact(time, "yy/MM/dd,HH:mm:sszz",CultureInfo.CurrentCulture).ToString("dd/MM/yyyy,HH:mm:sszz");
+            unreadMessages++;
+            Invoke(new Action(() =>
+            {
+                Util.FlashWindowEx(this);
+                Text = mainTitle + " (" + unreadMessages + ")";
+            }));
+
+            smsDb.StoreIncomingMessage(number, message, time);
+
+            if (number == numberToReply)
             {
                 // Incoming text from current sender, add message to conversation
                 Invoke(new Action(() =>
                 {
-                    messageViewer.Add(message, MessageControl.BubblePositionEnum.Left);
+                    messageViewer.AddReceived(message);
                 }));
                 unreadMessages--;
             }
             else
             {
-                if (!unreadInConvo.ContainsKey(num))
-                    unreadInConvo.Add(num, 1);
+                if (!unreadInConvo.ContainsKey(number))
+                    unreadInConvo[number] = 1;
                 else
-                    unreadInConvo[num]++;
+                    unreadInConvo[number]++;
+
                 string numUnread = (unreadMessages == 0) ? "" : " (" + unreadMessages.ToString() + ")";
                 Invoke(new Action(() =>
                 {
+                    foreach (Conversation.Entry ce in conversationView.Controls)
+                    {
+                        if (ce.ConvoNumber == number)
+                        {
+                            ce.SetUnread();
+                            ce.LastMessage = message;
+                        }
+                    }
                     messageTitle.Text = "Messages" + numUnread;
-                    ShowAllMessages();
+                    //ShowAllMessages();
                 }));
             }
         }
@@ -97,50 +121,58 @@ namespace ArduinoPhone
             try
             {
                 string line = "";
-                while ((line = serial.ReadLine()) != null){
-                    Console.WriteLine(line);
-                    if (line.StartsWith("+CMT: "))
+                while ((line = serial.ReadLine()) != null)
+                {
+                    ATCommandType cmdType = GetCmdType(line);
+                    switch (cmdType)
                     {
-                        string data = line + "," + serial.ReadLine();
-                        msg.IncomingMessage = data;
-                    }
-                    else if (line.StartsWith("+CLIP: ") && !gotIncomingNum)
-                    {
-                        Invoke(new Action(() =>
-                        {
-                            newCallNumber.Text = "Incoming call: " + line.Split('"')[1];
-                            Util.Animate(callNotification, Util.Effect.Slide, 150, 90);
-                        }));
-                        gotIncomingNum = true;
-                    }
-                    else if (line.StartsWith("+COLP: "))
-                    {
-                        Invoke(new Action(() =>
-                        {
-                            newCallNumber.Text = numberToReply;
-                        }));
-                    }
-                    else if (line.StartsWith("NO CARRIER"))
-                    {
-                        gotIncomingNum = false;
-                    }
-                    else if (line == "OK")
-                    {
-                        if (answeredCall)
-                        {
-                            answeredCall = false;
-                        }
-                    }
-                    else if (line.StartsWith("+CNUM: "))
-                    {
-                        string[] data = line.Split('"');
-                        myNum = FormatNumber(data[3]);
-                        Console.WriteLine("Number: " + myNum);
-                        gotOwnNumber = true;
+                        case ATCommandType.ReceivedMessage:
+                            string meta = line;
+                            string data = serial.ReadLine();
+                            string[] items = meta.Remove(0, 6).Replace("\"", "").Split(',');
+                            string num = FormatNumber(items[0]);
+                            string time = items[2] + "," + items[3];
+                            NotifyNewMessage(num, data, time);
+                            break;
+                        case ATCommandType.CallingLineIdentification:
+                            if (!gotIncomingNum)
+                            {
+                                Invoke(new Action(() =>
+                                {
+                                    newCallNumber.Text = "Incoming call: " + line.Split('"')[1];
+                                    Util.Animate(callNotification, Util.Effect.Slide, 150, 90);
+                                }));
+                                gotIncomingNum = true;
+                            }
+                            break;
+                        case ATCommandType.ConnectedLineIdentification:
+                            Invoke(new Action(() =>
+                            {
+                                newCallNumber.Text = numberToReply;
+                            }));
+                            break;
+                        case ATCommandType.CallEnd:
+                            Invoke(new Action(() =>
+                            {
+                                Util.Animate(callNotification, Util.Effect.Slide, 150, 90);
+                            }));
+                            gotIncomingNum = false;
+                            break;
+                        case ATCommandType.OK:
+                            if (answeredCall)
+                            {
+                                answeredCall = false;
+                            }
+                            break;
+                        case ATCommandType.SubscriberNumber:
+                            string[] newdata = line.Split('"');
+                            myNum = FormatNumber(newdata[3]);
+                            gotOwnNumber = true;
+                            break;
                     }
                 }
             }
-            catch (IOException io)
+            catch(System.IO.IOException io)
             {
                 Console.WriteLine("Error: " + io.Message);
             }
@@ -172,13 +204,11 @@ namespace ArduinoPhone
                 messageViewer.Height = mOldH - (newHeight - oldHeight);
             }
 
-            updateCharCount(replyBox.Text.Length);
+            updateCharCount();
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (serial != null && serial.IsOpen)
-                serial.Close();
             if (smsDb != null)
                 smsDb.CloseConnection();
         }
@@ -191,6 +221,8 @@ namespace ArduinoPhone
         private void MessageViewer_ControlAdded(object sender, ControlEventArgs e)
         {
             messageViewer.ScrollControlIntoView(e.Control);
+            MessageControl.Message m = e.Control as MessageControl.Message;
+            m.ContextMenuStrip = copyMessageText;
         }
 
         private void ConversationView_ControlAdded(object sender, ControlEventArgs e)
@@ -207,7 +239,13 @@ namespace ArduinoPhone
 
         private void ConvoClick(object sender, EventArgs e)
         {
+            if (prevEntry != null)
+                prevEntry.PubBackColor = Color.White;
             Conversation.Entry entry = GetEntryFromConvoClick(sender);
+            if (entry.hasUnread)
+                entry.SetRead();
+            entry.PubBackColor = Color.LightGray;
+            prevEntry = entry;
             ShowMessagesForNumber(entry.ConvoNumber);
         }
 
@@ -223,8 +261,6 @@ namespace ArduinoPhone
                 string comPort = ports[0];
                 try
                 {
-                    serial = new SerialPort(comPort, 115200, Parity.None, 8, StopBits.One);
-                    serial.DataReceived += DataReceived;
                     serial.NewLine = "\r\n";
                     serial.Open();
                 }
@@ -277,13 +313,12 @@ namespace ArduinoPhone
             recipientNumber.Text = number;
             if (unreadInConvo.ContainsKey(number))
             {
-                unreadInConvo[number]--;
-                if (unreadInConvo[number] == 0)
-                    unreadInConvo.Remove(number);
-
-                unreadMessages--;
+                int num = unreadInConvo[number];
+                unreadInConvo.Remove(number);
+                unreadMessages -= num;
                 string numUnread = (unreadMessages == 0) ? "" : " (" + unreadMessages.ToString() + ")";
                 messageTitle.Text = "Messages" + numUnread;
+                Text = mainTitle + numUnread;
             }
             smsDb.ShowMessagesForNumber(messageViewer, number);
             replyBox.Focus();
@@ -295,8 +330,9 @@ namespace ArduinoPhone
             smsDb.GetAllDbMessages(conversationView);
         }
 
-        private void updateCharCount(int length)
+        private void updateCharCount()
         {
+            int length = replyBox.Text.Length;
             if (length <= 160)
                 charCount.Text = length + " / 160";
             else
@@ -327,11 +363,11 @@ namespace ArduinoPhone
             Thread.Sleep(500);
 
             // Enable phone number in incoming calls
-            serial.WriteLine("AT+CLIP=1,1");
+            serial.WriteLine("AT+CLIP=1");
             Thread.Sleep(500);
 
             // Enable connected line notification
-            serial.WriteLine("AT+COLP=1,0");
+            serial.WriteLine("AT+COLP=1");
             Thread.Sleep(500);
 
             // Use verbose values for errors
@@ -349,7 +385,7 @@ namespace ArduinoPhone
             // Set clock yy/MM/dd,HH:mm:ss+-zz
             DateTime dt = DateTime.Now;
             string formatted = dt.ToString("yy/MM/dd,HH:mm:sszz");
-            serial.WriteLine("AT+CCLK=" + formatted);
+            serial.WriteLine("AT+CCLK=" + "\"" + formatted + "\"");
             Thread.Sleep(500);
         }
 
@@ -382,6 +418,24 @@ namespace ArduinoPhone
                 }
             }
             return null;
+        }
+
+        private ATCommandType GetCmdType(string line)
+        {
+            if (line.StartsWith("+CMT: "))
+                return ATCommandType.ReceivedMessage;
+            else if (line.StartsWith("+CLIP: "))
+                return ATCommandType.CallingLineIdentification;
+            else if (line.StartsWith("+COLP: "))
+                return ATCommandType.ConnectedLineIdentification;
+            else if (line.StartsWith("OK"))
+                return ATCommandType.OK;
+            else if (line.StartsWith("+CNUM: "))
+                return ATCommandType.SubscriberNumber;
+            else if (line.StartsWith("NO CARRIER"))
+                return ATCommandType.CallEnd;
+            else
+                return ATCommandType.Unknown;
         }
 
 
@@ -422,8 +476,8 @@ namespace ArduinoPhone
                 replyBox.Enabled = false;
                 recipientNumber.Text = "";
                 btnCall.Hide();
+                numberToReply = null;
             }
-            numberToReply = null;
             smsDb.DeleteConversation(entry.ConvoNumber);
             conversationView.Remove(entry);
         }
@@ -469,11 +523,11 @@ namespace ArduinoPhone
             serial.Write(message + (char)26);
             Thread.Sleep(100);
 
-            messageViewer.Add(message, MessageControl.BubblePositionEnum.Right);
+            messageViewer.AddSent(message);
             replyBox.Clear();
             btnSend.Enabled = false;
             conversationView.Add(fNum, message, fTime);
-            serial.WriteLine("AT+CEER");
+            replyBox.Focus();
         }
 
         private void copyText_Click(object sender, EventArgs e)

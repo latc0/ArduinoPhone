@@ -46,8 +46,9 @@
             this.newNumber = new System.Windows.Forms.TextBox();
             this.copyMessageText = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.copyText = new System.Windows.Forms.ToolStripMenuItem();
+            this.serial = new System.IO.Ports.SerialPort(this.components);
             this.conversationView = new Conversation();
-            this.messageViewer = new MessageControl();
+            this.messageViewer = new ArduinoPhone.MessageControl();
             this.callNotification.SuspendLayout();
             this.deleteConvo.SuspendLayout();
             this.copyMessageText.SuspendLayout();
@@ -68,6 +69,7 @@
             // 
             this.messageTitle.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.messageTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.messageTitle.ForeColor = System.Drawing.Color.Black;
             this.messageTitle.Location = new System.Drawing.Point(82, 9);
             this.messageTitle.Name = "messageTitle";
             this.messageTitle.Size = new System.Drawing.Size(142, 32);
@@ -91,13 +93,14 @@
             this.newMsg.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.newMsg.AutoSize = true;
             this.newMsg.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.newMsg.Cursor = System.Windows.Forms.Cursors.Hand;
             this.newMsg.FlatAppearance.BorderSize = 0;
             this.newMsg.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.newMsg.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.newMsg.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.newMsg.ForeColor = System.Drawing.Color.DodgerBlue;
-            this.newMsg.Location = new System.Drawing.Point(281, 12);
+            this.newMsg.Location = new System.Drawing.Point(278, 12);
             this.newMsg.Name = "newMsg";
-            this.newMsg.Size = new System.Drawing.Size(45, 26);
+            this.newMsg.Size = new System.Drawing.Size(48, 26);
             this.newMsg.TabIndex = 16;
             this.newMsg.Text = "New";
             this.newMsg.UseVisualStyleBackColor = true;
@@ -108,6 +111,7 @@
             this.btnSend.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnSend.AutoSize = true;
             this.btnSend.BackColor = System.Drawing.Color.White;
+            this.btnSend.Cursor = System.Windows.Forms.Cursors.Hand;
             this.btnSend.Enabled = false;
             this.btnSend.FlatAppearance.BorderColor = System.Drawing.Color.White;
             this.btnSend.FlatAppearance.BorderSize = 0;
@@ -230,10 +234,9 @@
             // 
             this.newNumber.BackColor = System.Drawing.Color.White;
             this.newNumber.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.newNumber.Location = new System.Drawing.Point(335, 12);
-            this.newNumber.Multiline = true;
+            this.newNumber.Location = new System.Drawing.Point(335, 19);
             this.newNumber.Name = "newNumber";
-            this.newNumber.Size = new System.Drawing.Size(312, 20);
+            this.newNumber.Size = new System.Drawing.Size(312, 13);
             this.newNumber.TabIndex = 23;
             this.newNumber.Visible = false;
             // 
@@ -251,6 +254,12 @@
             this.copyText.Size = new System.Drawing.Size(77, 22);
             this.copyText.Text = "Copy";
             this.copyText.Click += new System.EventHandler(this.copyText_Click);
+            // 
+            // serial
+            // 
+            this.serial.BaudRate = 115200;
+            this.serial.PortName = "COM3";
+            this.serial.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(this.DataReceived);
             // 
             // conversationView
             // 
@@ -271,15 +280,9 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this.messageViewer.AutoScroll = true;
             this.messageViewer.BackColor = System.Drawing.Color.White;
-            this.messageViewer.BubbleIndent = 40;
-            this.messageViewer.BubbleSpacing = 10;
-            this.messageViewer.DrawArrow = true;
-            this.messageViewer.LeftBubbleColor = System.Drawing.Color.LightGray;
-            this.messageViewer.LeftBubbleTextColor = System.Drawing.Color.Black;
+            this.messageViewer.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.messageViewer.Location = new System.Drawing.Point(332, 44);
             this.messageViewer.Name = "messageViewer";
-            this.messageViewer.RightBubbleColor = System.Drawing.Color.LimeGreen;
-            this.messageViewer.RightBubbleTextColor = System.Drawing.Color.White;
             this.messageViewer.Size = new System.Drawing.Size(320, 501);
             this.messageViewer.TabIndex = 24;
             this.messageViewer.Text = "messageControl1";
@@ -290,7 +293,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.BackColor = System.Drawing.Color.Moccasin;
+            this.BackColor = System.Drawing.Color.WhiteSmoke;
             this.ClientSize = new System.Drawing.Size(659, 601);
             this.Controls.Add(this.newNumber);
             this.Controls.Add(this.btnCall);
@@ -304,6 +307,7 @@
             this.Controls.Add(this.charCount);
             this.Controls.Add(this.messageTitle);
             this.DoubleBuffered = true;
+            this.ForeColor = System.Drawing.SystemColors.WindowText;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.Name = "Main";
@@ -338,6 +342,7 @@
         private System.Windows.Forms.Label endCall;
         private System.Windows.Forms.ContextMenuStrip copyMessageText;
         private System.Windows.Forms.ToolStripMenuItem copyText;
+        private System.IO.Ports.SerialPort serial;
     }
 }
 

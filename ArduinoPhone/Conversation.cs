@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
 public class Conversation : ScrollableControl
@@ -41,7 +42,6 @@ public class Conversation : ScrollableControl
             int convos = Conversations.Count;
             if (convos > 0)
                 e.Top = Conversations[convos - 1].Top + Conversations[convos - 1].Height;
-
             Conversations.Add(e);
             Controls.Add(e);
         }
@@ -83,19 +83,31 @@ public class Conversation : ScrollableControl
         Controls.Clear();
     }
 
-    public class Entry : GroupBox
+    public class Entry : Control
     {
-        private Label Number;
-        private Label Message;
-        private Label Time;
+        public Label Number;
+        public Label Message;
+        public Label Time;
+        public bool hasUnread = false;
 
-        public bool hasUnreadMsgs = false;
+        public Color PubBackColor
+        {
+            set
+            {
+                Number.BackColor = value;
+                Message.BackColor = value;
+                Time.BackColor = value;
+                BackColor = value;
+            }
+        }
 
         public Entry(string number, string message, string time)
         {
-            SetStyle(ControlStyles.AllPaintingInWmPaint | 
-                ControlStyles.OptimizedDoubleBuffer | 
-                ControlStyles.SupportsTransparentBackColor, true);
+            SetStyle(ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.SupportsTransparentBackColor |
+                ControlStyles.UserPaint, true);
             DoubleBuffered = true;
             Size = new Size(280, 100);
             BackColor = Color.White;
@@ -107,6 +119,7 @@ public class Conversation : ScrollableControl
             Text = "";
             Font = new Font("Segoe UI", 9);
             Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            Cursor = Cursors.Hand;
 
             Number = new Label();
             Number.Text = number;
@@ -116,6 +129,8 @@ public class Conversation : ScrollableControl
             Message = new Label();
             Message.BackColor = Color.White;
             Message.ForeColor = Color.Black;
+            message = message.Replace("\r\n", " ");
+            message = message.Replace("\n", " ");
             if (message.Length > 70)
                 message = message.Substring(0, 68) + "..";
             Message.Text = message;
@@ -141,7 +156,44 @@ public class Conversation : ScrollableControl
         }
         public string LastMessage
         {
-            set { Message.Text = value; }
+            set
+            {
+                // TODO: Check length/remove newlines
+                Message.Text = value;
+            }
+        }
+        public void SetUnread()
+        {
+            Number.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            Message.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            Time.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            hasUnread = true;
+        }
+
+        public void SetRead()
+        {
+            Number.Font = new Font("Segoe UI", 9);
+            Message.Font = new Font("Segoe UI", 9);
+            Time.Font = new Font("Segoe UI", 9);
+            hasUnread = false;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Bitmap B = new Bitmap(Width, Height);
+            Graphics G = Graphics.FromImage(B);
+
+            G.SmoothingMode = SmoothingMode.HighQuality;
+            G.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            G.Clear(BackColor);
+
+            // Add bottom separator
+            G.DrawRectangle(Pens.LightGray, new Rectangle(0, 80, Width, 1));
+
+            G.Dispose();
+            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            e.Graphics.DrawImageUnscaled(B, 0, 0);
+            B.Dispose();
         }
     }
 }

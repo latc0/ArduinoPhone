@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.SQLite;
-using System.Globalization;
+﻿using System.Data.SQLite;
 using System.IO;
 
 namespace ArduinoPhone
@@ -18,7 +15,7 @@ namespace ArduinoPhone
             if (!File.Exists("sms.db"))
             {
                 SQLiteConnection.CreateFile("sms.db");
-                string sql = "create table messages(sender varchar(50), receiver varchar(50), message varchar(300), timestamp varchar(50))";
+                string sql = "create table messages(number varchar(50), type varchar(8), message varchar(300), timestamp varchar(50))";
                 command = new SQLiteCommand(sql);
             }
             dbConn = new SQLiteConnection("Data Source=sms.db;Version=3;");
@@ -32,10 +29,10 @@ namespace ArduinoPhone
 
         public void StoreOutgoingMessage(string dest, string message, string time)
         {
-            SQLiteCommand command = new SQLiteCommand("insert into messages (sender,receiver,message,timestamp) "
-                + "values ($myNum, $num, $message, $time)", dbConn);
-            command.Parameters.AddWithValue("$myNum", myNum);
+            SQLiteCommand command = new SQLiteCommand("insert into messages (number,type,message,timestamp) "
+                + "values ($num, $type, $message, $time)", dbConn);
             command.Parameters.AddWithValue("$num", dest);
+            command.Parameters.AddWithValue("$type", "sent");
             command.Parameters.AddWithValue("$message", message);
             command.Parameters.AddWithValue("$time", time);
             command.ExecuteNonQuery();
@@ -45,10 +42,10 @@ namespace ArduinoPhone
         {
             SQLiteCommand command = new SQLiteCommand(
                     "insert into messages "
-                   + "(sender,receiver,message,timestamp) "
-                   + "values ($srcNum, $myNum, $message, $time)", dbConn);
-            command.Parameters.AddWithValue("$srcNum", src);
-            command.Parameters.AddWithValue("$myNum", myNum);
+                   + "(number,type,message,timestamp) "
+                   + "values ($num, $type, $message, $time)", dbConn);
+            command.Parameters.AddWithValue("$num", src);
+            command.Parameters.AddWithValue("$type", "recv");
             command.Parameters.AddWithValue("$message", message);
             command.Parameters.AddWithValue("$time", time);
             command.ExecuteNonQuery();
@@ -58,7 +55,7 @@ namespace ArduinoPhone
         {
             SQLiteCommand command = new SQLiteCommand(
                     "select * from messages "
-                   + "where sender=$num or receiver=$num", dbConn);
+                   + "where number=$num", dbConn);
             command.Parameters.AddWithValue("$num", number);
             command.ExecuteNonQuery();
             SQLiteDataReader read = command.ExecuteReader();
@@ -66,12 +63,12 @@ namespace ArduinoPhone
             {
                 while (read.Read())
                 {
-                    string sender = read.GetValue(0).ToString();
+                    string mType = read.GetValue(1).ToString();
                     string message = read.GetValue(2).ToString();
-                    if (sender == myNum)
-                        m.Add(message, MessageControl.BubblePositionEnum.Right);
+                    if (mType == "sent")
+                        m.AddSent(message);
                     else
-                        m.Add(message, MessageControl.BubblePositionEnum.Left);
+                        m.AddReceived(message);
                 }
             }
         }
@@ -79,21 +76,18 @@ namespace ArduinoPhone
         public void GetAllDbMessages(Conversation c)
         {
             SQLiteCommand command = new SQLiteCommand(
-                "select * from messages", dbConn);
+                "select number,message,timestamp from messages group by number", dbConn);
             command.ExecuteNonQuery();
             SQLiteDataReader read = command.ExecuteReader();
             if (read.HasRows)
             {
-                string num = "", message = "", timestamp = "";
                 while (read.Read())
                 {
-                    string sender = read.GetString(0);
-                    string receiver = read.GetString(1);
-                    message = read.GetString(2);
-                    timestamp = read.GetString(3);
-                    num = (sender == myNum) ? receiver : sender;
+                    string number = read.GetString(0);
+                    string message = read.GetString(1);
+                    string timestamp = read.GetString(2);
+                    c.Add(number, message, timestamp);
                 }
-                c.Add(num, message, timestamp);
             }
         }
 
@@ -101,20 +95,16 @@ namespace ArduinoPhone
         {
             SQLiteCommand command = new SQLiteCommand(
                    "select * from messages "
-                  + "where sender=$num or receiver=$num group by sender", dbConn);
+                  + "where number=$num group by number", dbConn);
             command.Parameters.AddWithValue("$num", number);
             command.ExecuteNonQuery();
             SQLiteDataReader read = command.ExecuteReader();
-            if (read.HasRows)
-            {
-                return true;
-            }
-            return false;
+            return read.HasRows;
         }
 
         public void DeleteConversation(string number)
         {
-            SQLiteCommand command = new SQLiteCommand("delete from messages where sender=$num or receiver=$num", dbConn);
+            SQLiteCommand command = new SQLiteCommand("delete from messages where number=$num", dbConn);
             command.Parameters.AddWithValue("$num", number);
             command.ExecuteNonQuery();
         }
