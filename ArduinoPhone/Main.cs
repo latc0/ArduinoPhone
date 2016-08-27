@@ -256,7 +256,7 @@ namespace ArduinoPhone
             string[] ports = SerialPort.GetPortNames();
             if (ports.Length > 1)
                 MessageBox.Show("Many many COM ports...");
-            else
+            else if (ports.Length == 1)
             {
                 string comPort = ports[0];
                 try
@@ -517,11 +517,23 @@ namespace ArduinoPhone
             string fNum = FormatNumber(numberToReply);
             string fTime = DateTime.Now.ToString("dd/MM/yyyy,HH:mm:sszz");
             smsDb.StoreOutgoingMessage(fNum, message, fTime);
-
-            serial.Write("AT+CMGS=\"" + numberToReply + "\"\r");
-            Thread.Sleep(100);
-            serial.Write(message + (char)26);
-            Thread.Sleep(100);
+            string part = message;
+            while (message.Length > 0)
+            {
+                int toRemove = 0;
+                if (message.Length >= 160)
+                    toRemove = 160;
+                else
+                    toRemove = message.Length;
+                part = message.Substring(0, toRemove);
+                Console.WriteLine("Sending: {0} with length {1}", part, part.Length);
+                message = message.Remove(0, toRemove);
+                Console.WriteLine("Message: {0} with length {1}", message, message.Length);
+                /*serial.Write("AT+CMGS=\"" + numberToReply + "\"\r");
+                Thread.Sleep(100);
+                serial.Write(message + (char)26);
+                Thread.Sleep(100);*/
+            }
 
             messageViewer.AddSent(message);
             replyBox.Clear();

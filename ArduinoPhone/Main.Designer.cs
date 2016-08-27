@@ -56,7 +56,8 @@
             // 
             // replyBox
             // 
-            this.replyBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.replyBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.replyBox.Enabled = false;
             this.replyBox.Location = new System.Drawing.Point(332, 556);
             this.replyBox.Multiline = true;
@@ -67,7 +68,6 @@
             // 
             // messageTitle
             // 
-            this.messageTitle.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.messageTitle.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.messageTitle.ForeColor = System.Drawing.Color.Black;
             this.messageTitle.Location = new System.Drawing.Point(82, 9);
@@ -79,7 +79,7 @@
             // 
             // charCount
             // 
-            this.charCount.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.charCount.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.charCount.AutoSize = true;
             this.charCount.Enabled = false;
             this.charCount.Location = new System.Drawing.Point(332, 579);
@@ -90,7 +90,6 @@
             // 
             // newMsg
             // 
-            this.newMsg.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.newMsg.AutoSize = true;
             this.newMsg.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
             this.newMsg.Cursor = System.Windows.Forms.Cursors.Hand;
@@ -264,7 +263,7 @@
             // conversationView
             // 
             this.conversationView.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Left)));
             this.conversationView.AutoScroll = true;
             this.conversationView.BackColor = System.Drawing.Color.White;
             this.conversationView.Location = new System.Drawing.Point(6, 44);
@@ -276,7 +275,8 @@
             // 
             // messageViewer
             // 
-            this.messageViewer.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            this.messageViewer.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.messageViewer.AutoScroll = true;
             this.messageViewer.BackColor = System.Drawing.Color.White;
@@ -308,7 +308,6 @@
             this.Controls.Add(this.messageTitle);
             this.DoubleBuffered = true;
             this.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.Name = "Main";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;

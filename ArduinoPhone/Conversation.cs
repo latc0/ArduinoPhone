@@ -159,7 +159,11 @@ public class Conversation : ScrollableControl
             set
             {
                 // TODO: Check length/remove newlines
-                Message.Text = value;
+                string t = value;
+                t = t.Replace("\r\n", " ");
+                if (t.Length > 200)
+                    t.Remove(200, (t.Length - 200));
+                Message.Text = t;
             }
         }
         public void SetUnread()

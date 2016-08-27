@@ -17,6 +17,7 @@ namespace ArduinoPhone
         private int _BubbleIndent = 40;
         private int _BubbleSpacing = 10;
         public enum BubblePositionEnum { Left, Right }
+        private const int MAX_LEN = 260;
 
         public MessageControl()
         {
@@ -38,9 +39,8 @@ namespace ArduinoPhone
             Controls.Clear();
         }
 
-        public void AddSent(string message)
+        private Message CreateCommonMessage(Message b, string message)
         {
-            Message b = new Message(BubblePositionEnum.Right);
             if (Messages.Count > 0)
             {
                 b.Top = Messages[Messages.Count - 1].Top + Messages[Messages.Count - 1].Height + _BubbleSpacing;
@@ -53,17 +53,24 @@ namespace ArduinoPhone
             b.Text = message;
             using (Graphics G = Graphics.FromHwnd(IntPtr.Zero))
             {
-                SizeF s = G.MeasureString(b.Text, Font, Width - 25);
-                b.Width = (int)s.Width * 2;
-                b.Height = (int)(Math.Floor(s.Height) + 10);
+                SizeF s = G.MeasureString(b.Text, Font, Width);
+                int textW = (int)s.Width;
+                b.Width = (textW > MAX_LEN) ? MAX_LEN : textW;
+                b.Height = (int)(Math.Floor(s.Height) * 1.3);
             }
+            return b;
+        }
+
+        public void AddSent(string message)
+        {
+            Message b = new Message(BubblePositionEnum.Right);
+            b = CreateCommonMessage(b, message);
             b.Left = Width - b.Width;
             if (VerticalScroll.Visible)
                 b.Left -= SystemInformation.VerticalScrollBarWidth;
             b.BubbleColor = _RightBubbleColor;
             b.ForeColor = _RightBubbleTextColor;
             b.Anchor |= AnchorStyles.Right;
-
             Messages.Add(b);
             Controls.Add(b);
         }
@@ -71,27 +78,12 @@ namespace ArduinoPhone
         public void AddReceived(string message)
         {
             Message b = new Message(BubblePositionEnum.Left);
-            if (Messages.Count > 0)
-            {
-                b.Top = Messages[Messages.Count - 1].Top + Messages[Messages.Count - 1].Height + _BubbleSpacing + AutoScrollPosition.Y;
-            }
-            else
-            {
-                b.Top = _BubbleSpacing + AutoScrollPosition.Y;
-            }
-            b.Text = message;
-            using (Graphics G = Graphics.FromHwnd(IntPtr.Zero))
-            {
-                SizeF s = G.MeasureString(b.Text, Font, Width - 25);
-                b.Width = (int)s.Width;
-                b.Height = (int)(Math.Floor(s.Height) + 10);
-            }
-
+            b = CreateCommonMessage(b, message);
+            Console.WriteLine(b.Text);
             b.Left = 10;
             b.BubbleColor = _LeftBubbleColor;
             b.ForeColor = _LeftBubbleTextColor;
             b.Anchor |= AnchorStyles.Left;
-
             Messages.Add(b);
             Controls.Add(b);
         }
@@ -146,7 +138,6 @@ namespace ArduinoPhone
                     ControlStyles.SupportsTransparentBackColor |
                     ControlStyles.UserPaint, true);
                 DoubleBuffered = true;
-                Size = new Size(152, 38);
                 BackColor = Color.Transparent;
                 ForeColor = Color.FromArgb(52, 52, 52);
                 Font = new Font("Segoe UI", 10);
@@ -181,6 +172,7 @@ namespace ArduinoPhone
                     p2 = 0;
                     p3 = 10;
                 }
+
                 Shape.AddRectangle(new Rectangle(x, 0, Width - 10, Height));  // Area to be filled by bubble colour
                 Shape.CloseAllFigures();
                 _G.FillPath(new SolidBrush(_BubbleColor), Shape);
