@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -26,6 +25,7 @@ public class Conversation : ScrollableControl
         string[] data = time.Split(',')[1].Split(':');
         time = data[0] + ":" + data[1];
 
+        // Check for existing conversations with same number
         bool match = false;
         foreach (Entry en in Conversations)
         {
@@ -42,9 +42,12 @@ public class Conversation : ScrollableControl
             int convos = Conversations.Count;
             if (convos > 0)
                 e.Top = Conversations[convos - 1].Top + Conversations[convos - 1].Height;
+            e.LastMessage = message;
             Conversations.Add(e);
             Controls.Add(e);
+            e.Focus();
         }
+        RedrawControls();
     }
 
     public void RedrawControls()
@@ -124,9 +127,11 @@ public class Conversation : ScrollableControl
             Number = new Label();
             Number.Text = number;
             Number.Width = 150;
+            Number.Height = 12;
             Number.Location = new Point(10, 15);
 
             Message = new Label();
+            Message.AutoSize = false;
             Message.BackColor = Color.White;
             Message.ForeColor = Color.Black;
             message = message.Replace("\r\n", " ");
@@ -158,7 +163,6 @@ public class Conversation : ScrollableControl
         {
             set
             {
-                // TODO: Check length/remove newlines
                 string t = value;
                 t = t.Replace("\r\n", " ");
                 if (t.Length > 200)

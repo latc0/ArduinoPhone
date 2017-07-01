@@ -45,19 +45,19 @@ namespace ArduinoPhone
             Unknown,
         }
 
+        private enum StoreAction
+        {
+            Add,
+            Delete,
+        }
+
         //Events
         private void NotifyNewMessage(string number, string message, string time)
         {
             string[] tz = time.Split('+');
             int tzi = Convert.ToInt32(tz[1]) / 4;
             time = tz[0] + "+0" + tzi;
-            time = DateTime.ParseExact(time, "yy/MM/dd,HH:mm:sszz",CultureInfo.CurrentCulture).ToString("dd/MM/yyyy,HH:mm:sszz");
-            unreadMessages++;
-            Invoke(new Action(() =>
-            {
-                Util.FlashWindowEx(this);
-                Text = mainTitle + " (" + unreadMessages + ")";
-            }));
+            time = DateTime.ParseExact(time, "yy/MM/dd,HH:mm:sszz", CultureInfo.CurrentCulture).ToString("dd/MM/yyyy,HH:mm:sszz");
 
             smsDb.StoreIncomingMessage(number, message, time);
 
@@ -68,30 +68,18 @@ namespace ArduinoPhone
                 {
                     messageViewer.AddReceived(message);
                 }));
-                unreadMessages--;
             }
             else
             {
-                if (!unreadInConvo.ContainsKey(number))
-                    unreadInConvo[number] = 1;
-                else
-                    unreadInConvo[number]++;
-
-                string numUnread = (unreadMessages == 0) ? "" : " (" + unreadMessages.ToString() + ")";
-                Invoke(new Action(() =>
-                {
-                    foreach (Conversation.Entry ce in conversationView.Controls)
-                    {
-                        if (ce.ConvoNumber == number)
-                        {
-                            ce.SetUnread();
-                            ce.LastMessage = message;
-                        }
-                    }
-                    messageTitle.Text = "Messages" + numUnread;
-                    //ShowAllMessages();
-                }));
+                unreadMessages++;
+                UpdateReadMessageStore(number, StoreAction.Add);
             }
+
+            Invoke(new Action(() =>
+            {
+                Util.FlashWindowEx(this);
+                conversationView.Add(number, message, time);
+            }));
         }
 
         private void ReplyBox_GotFocus(object sender, EventArgs e)
@@ -167,6 +155,7 @@ namespace ArduinoPhone
                         case ATCommandType.SubscriberNumber:
                             string[] newdata = line.Split('"');
                             myNum = FormatNumber(newdata[3]);
+                            Console.WriteLine(myNum);
                             gotOwnNumber = true;
                             break;
                     }
@@ -261,6 +250,7 @@ namespace ArduinoPhone
                 string comPort = ports[0];
                 try
                 {
+                    serial.PortName = comPort;
                     serial.NewLine = "\r\n";
                     serial.Open();
                 }
@@ -269,6 +259,34 @@ namespace ArduinoPhone
                     MessageBox.Show(comPort + " is in use.");
                 }
             }
+        }
+
+        private void UpdateReadMessageStore(string number, StoreAction sa)
+        {
+            if (sa == StoreAction.Add)
+            {
+                if (!unreadInConvo.ContainsKey(number))
+                    unreadInConvo[number] = 1;
+                else
+                    unreadInConvo[number]++;
+            }
+            else
+            {
+                if (unreadInConvo.ContainsKey(number))
+                {
+                    int num = unreadInConvo[number];
+                    unreadInConvo.Remove(number);
+                    unreadMessages -= num;
+                }
+            }
+
+            string numUnread = (unreadMessages == 0) ? "" : " (" + unreadMessages.ToString() + ")";
+
+            Invoke(new Action(() =>
+            {
+                messageTitle.Text = "Messages" + numUnread;
+                Text = mainTitle + numUnread;
+            }));
         }
 
         private string FormatNumber(string number)
@@ -311,15 +329,7 @@ namespace ArduinoPhone
             messageViewer.RemoveAll();
             numberToReply = number;
             recipientNumber.Text = number;
-            if (unreadInConvo.ContainsKey(number))
-            {
-                int num = unreadInConvo[number];
-                unreadInConvo.Remove(number);
-                unreadMessages -= num;
-                string numUnread = (unreadMessages == 0) ? "" : " (" + unreadMessages.ToString() + ")";
-                messageTitle.Text = "Messages" + numUnread;
-                Text = mainTitle + numUnread;
-            }
+            UpdateReadMessageStore(number, StoreAction.Delete);
             smsDb.ShowMessagesForNumber(messageViewer, number);
             replyBox.Focus();
         }
@@ -477,6 +487,10 @@ namespace ArduinoPhone
                 recipientNumber.Text = "";
                 btnCall.Hide();
                 numberToReply = null;
+                if (entry.hasUnread)
+                {
+                    
+                }
             }
             smsDb.DeleteConversation(entry.ConvoNumber);
             conversationView.Remove(entry);
@@ -517,6 +531,11 @@ namespace ArduinoPhone
             string fNum = FormatNumber(numberToReply);
             string fTime = DateTime.Now.ToString("dd/MM/yyyy,HH:mm:sszz");
             smsDb.StoreOutgoingMessage(fNum, message, fTime);
+            messageViewer.AddSent(message);
+            replyBox.Clear();
+            btnSend.Enabled = false;
+            conversationView.Add(fNum, message, fTime);
+            replyBox.Focus();
             string part = message;
             while (message.Length > 0)
             {
@@ -526,20 +545,12 @@ namespace ArduinoPhone
                 else
                     toRemove = message.Length;
                 part = message.Substring(0, toRemove);
-                Console.WriteLine("Sending: {0} with length {1}", part, part.Length);
                 message = message.Remove(0, toRemove);
-                Console.WriteLine("Message: {0} with length {1}", message, message.Length);
                 /*serial.Write("AT+CMGS=\"" + numberToReply + "\"\r");
                 Thread.Sleep(100);
                 serial.Write(message + (char)26);
                 Thread.Sleep(100);*/
             }
-
-            messageViewer.AddSent(message);
-            replyBox.Clear();
-            btnSend.Enabled = false;
-            conversationView.Add(fNum, message, fTime);
-            replyBox.Focus();
         }
 
         private void copyText_Click(object sender, EventArgs e)

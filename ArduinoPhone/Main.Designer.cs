@@ -59,10 +59,10 @@
             this.replyBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.replyBox.Enabled = false;
-            this.replyBox.Location = new System.Drawing.Point(332, 556);
+            this.replyBox.Location = new System.Drawing.Point(332, 552);
             this.replyBox.Multiline = true;
             this.replyBox.Name = "replyBox";
-            this.replyBox.Size = new System.Drawing.Size(268, 20);
+            this.replyBox.Size = new System.Drawing.Size(293, 20);
             this.replyBox.TabIndex = 4;
             this.replyBox.TextChanged += new System.EventHandler(this.replyBox_TextChanged);
             // 
@@ -82,7 +82,7 @@
             this.charCount.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.charCount.AutoSize = true;
             this.charCount.Enabled = false;
-            this.charCount.Location = new System.Drawing.Point(332, 579);
+            this.charCount.Location = new System.Drawing.Point(332, 575);
             this.charCount.Name = "charCount";
             this.charCount.Size = new System.Drawing.Size(42, 13);
             this.charCount.TabIndex = 14;
@@ -117,7 +117,7 @@
             this.btnSend.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnSend.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btnSend.ForeColor = System.Drawing.Color.DodgerBlue;
-            this.btnSend.Location = new System.Drawing.Point(606, 551);
+            this.btnSend.Location = new System.Drawing.Point(631, 547);
             this.btnSend.Name = "btnSend";
             this.btnSend.Size = new System.Drawing.Size(46, 28);
             this.btnSend.TabIndex = 18;
@@ -190,7 +190,7 @@
             // 
             this.recipientNumber.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.recipientNumber.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.recipientNumber.Location = new System.Drawing.Point(410, 9);
+            this.recipientNumber.Location = new System.Drawing.Point(435, 9);
             this.recipientNumber.Name = "recipientNumber";
             this.recipientNumber.Size = new System.Drawing.Size(140, 32);
             this.recipientNumber.TabIndex = 30;
@@ -205,7 +205,7 @@
             this.btnCall.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.btnCall.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btnCall.ForeColor = System.Drawing.Color.DodgerBlue;
-            this.btnCall.Location = new System.Drawing.Point(611, 12);
+            this.btnCall.Location = new System.Drawing.Point(636, 12);
             this.btnCall.Name = "btnCall";
             this.btnCall.Size = new System.Drawing.Size(41, 26);
             this.btnCall.TabIndex = 31;
@@ -231,11 +231,13 @@
             // 
             // newNumber
             // 
+            this.newNumber.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.newNumber.BackColor = System.Drawing.Color.White;
             this.newNumber.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.newNumber.Location = new System.Drawing.Point(335, 19);
+            this.newNumber.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.newNumber.Location = new System.Drawing.Point(380, 17);
             this.newNumber.Name = "newNumber";
-            this.newNumber.Size = new System.Drawing.Size(312, 13);
+            this.newNumber.Size = new System.Drawing.Size(250, 15);
             this.newNumber.TabIndex = 23;
             this.newNumber.Visible = false;
             // 
@@ -268,7 +270,7 @@
             this.conversationView.BackColor = System.Drawing.Color.White;
             this.conversationView.Location = new System.Drawing.Point(6, 44);
             this.conversationView.Name = "conversationView";
-            this.conversationView.Size = new System.Drawing.Size(320, 559);
+            this.conversationView.Size = new System.Drawing.Size(320, 555);
             this.conversationView.TabIndex = 0;
             this.conversationView.Text = "conversation1";
             this.conversationView.ControlAdded += new System.Windows.Forms.ControlEventHandler(this.ConversationView_ControlAdded);
@@ -283,7 +285,7 @@
             this.messageViewer.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.messageViewer.Location = new System.Drawing.Point(332, 44);
             this.messageViewer.Name = "messageViewer";
-            this.messageViewer.Size = new System.Drawing.Size(320, 501);
+            this.messageViewer.Size = new System.Drawing.Size(345, 497);
             this.messageViewer.TabIndex = 24;
             this.messageViewer.Text = "messageControl1";
             this.messageViewer.ControlAdded += new System.Windows.Forms.ControlEventHandler(this.MessageViewer_ControlAdded);
@@ -294,7 +296,7 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.WhiteSmoke;
-            this.ClientSize = new System.Drawing.Size(659, 601);
+            this.ClientSize = new System.Drawing.Size(684, 597);
             this.Controls.Add(this.newNumber);
             this.Controls.Add(this.btnCall);
             this.Controls.Add(this.recipientNumber);
@@ -309,6 +311,7 @@
             this.DoubleBuffered = true;
             this.ForeColor = System.Drawing.SystemColors.WindowText;
             this.MaximizeBox = false;
+            this.MinimumSize = new System.Drawing.Size(700, 400);
             this.Name = "Main";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "ArduinoPhone";

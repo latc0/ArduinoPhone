@@ -54,9 +54,9 @@ namespace ArduinoPhone
             using (Graphics G = Graphics.FromHwnd(IntPtr.Zero))
             {
                 SizeF s = G.MeasureString(b.Text, Font, Width);
-                int textW = (int)s.Width;
+                int textW = (int)s.Width + 20;
                 b.Width = (textW > MAX_LEN) ? MAX_LEN : textW;
-                b.Height = (int)(Math.Floor(s.Height) * 1.3);
+                b.Height = (int)(Math.Floor(s.Height) * 1.5);
             }
             return b;
         }
@@ -73,13 +73,13 @@ namespace ArduinoPhone
             b.Anchor |= AnchorStyles.Right;
             Messages.Add(b);
             Controls.Add(b);
+            Invalidate();
         }
 
         public void AddReceived(string message)
         {
             Message b = new Message(BubblePositionEnum.Left);
             b = CreateCommonMessage(b, message);
-            Console.WriteLine(b.Text);
             b.Left = 10;
             b.BubbleColor = _LeftBubbleColor;
             b.ForeColor = _LeftBubbleTextColor;
